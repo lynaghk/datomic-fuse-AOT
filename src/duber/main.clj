@@ -25,6 +25,16 @@
 (definterface IFoo
   (foo []))
 
+(defn fooer [!db]
+  (proxy [IFoo] []
+    (foo []
+
+      (println (d/q '[:find ?n :where [?e :duber/name ?n]]
+                    @!db))
+
+      (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
+                    @!db)))))
+
 (defn -main [& args]
 
   (let [conn (new-datomic-conn)]
@@ -34,17 +44,10 @@
     (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
                   (d/db conn))))
 
-
   (let [conn (new-datomic-conn)
-        f (proxy [IFoo] []
-            (foo []
+        f (fooer (atom (d/db conn)))]
+    (.start (Thread. (fn []
+                       (.foo f)))))
 
-              (println (d/q '[:find ?n :where [?e :duber/name ?n]]
-                            (d/db conn)))
-
-              (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                            (d/db conn)))))]
-
-    (.foo f))
-
-  (System/exit 0))
+  ;;(System/exit 0)
+  )
