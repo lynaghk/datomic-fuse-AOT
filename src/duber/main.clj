@@ -1,5 +1,6 @@
 (ns duber.main
   (:require [datomic.api :as d])
+  (:import duber.Fooer)
   (:gen-class))
 
 (defn new-datomic-conn
@@ -22,11 +23,8 @@
                    :duber/name "hello world"}])
     conn))
 
-(definterface IFoo
-  (foo []))
-
 (defn fooer [!db]
-  (proxy [IFoo] []
+  (proxy [Fooer] []
     (foo []
 
       (println (d/q '[:find ?n :where [?e :duber/name ?n]]
@@ -46,8 +44,6 @@
 
   (let [conn (new-datomic-conn)
         f (fooer (atom (d/db conn)))]
-    (.start (Thread. (fn []
-                       (.foo f)))))
+    (.foo f))
 
-  ;;(System/exit 0)
-  )
+  (System/exit 0))

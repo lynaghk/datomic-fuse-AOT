@@ -10,6 +10,6 @@
                  ]
 
   :omit-source true
-
+  :java-source-paths ["src/"]
   :aot :all
   :main duber.main)
