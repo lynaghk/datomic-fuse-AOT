@@ -6,11 +6,10 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [com.datomic/datomic-free "0.8.4218"]
 
-                 [fuse-jna "abceef"]
-                 [net.java.dev.jna/jna "3.5.2"] ;;dependency for fuse-jna
+
                  ]
 
   :omit-source true
-  :repositories {"local" {:url "file://repo"}}
+
   :aot :all
   :main duber.main)
