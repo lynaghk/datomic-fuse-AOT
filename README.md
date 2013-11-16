@@ -1,6 +1,7 @@
 # duber
 
 I created this tiny project to try and isolate AOT compilation problems on a larger FUSE + Datomic project of mine.
+Discussion on datomic mailing list: https://groups.google.com/forum/#!topic/datomic/8WjnKqSrjgg
 
 Run
 
