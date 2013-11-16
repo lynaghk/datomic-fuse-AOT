@@ -33,25 +33,6 @@
     conn))
 
 
-(defn mkfs-conn
-  [conn]
-  (proxy [FuseFilesystemAdapterFull] []
-
-    (getattr
-      [^String path ^StructStat$StatWrapper stat]
-      (prn "getattr" path)
-      (.setMode stat TypeMode$NodeType/DIRECTORY)
-      0)
-
-    (readdir
-      [^String path ^DirectoryFiller filler]
-      (prn "reading directory")
-      (let [^Iterable entries (->> (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                                        (d/db conn))
-                                   first)]
-        (.add filler entries))
-      0)))
-
 (defn mkfs-db
   [db]
   (proxy [FuseFilesystemAdapterFull] []
@@ -72,113 +53,18 @@
       0)))
 
 
-
-
-
 (defn -main [& args]
 
-  (println "plain query")
-  (let [conn (new-datomic-conn)]
-    (println (d/q '[:find ?n :where [?e :duber/name ?n]]
-                  (d/db conn)))
-
-    (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                  (d/db conn))))
-
-  (println "query running in proxy inheriting from concrete Java class")
-  (let [conn (new-datomic-conn)
-        f (proxy [Fooer] []
-            (foo []
-              (println (d/q '[:find ?n :where [?e :duber/name ?n]]
-                            (d/db conn)))
-
-              (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                            (d/db conn)))))]
-    (.foo f))
-
-  (println "query running in proxy inheriting from concrete Java class, db outside of proxy")
-  (let [conn (new-datomic-conn)
-        db (d/db conn)
-        f (proxy [Fooer] []
-            (foo []
-              (println (d/q '[:find ?n :where [?e :duber/name ?n]]
-                            db))
-
-              (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                            db))))]
-    (.foo f))
-
-
-
-
-
+  ;;uncomment this to fix AOT.
   
+  ;; (println "plain query")
+  ;; (let [conn (new-datomic-conn)]
+  ;;   (println (d/q '[:find ?n :where [?e :duber/name ?n]]
+  ;;                 (d/db conn)))
 
+  ;;   (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
+  ;;                 (d/db conn))))
   
-  (println "query running in mounted proxy inheriting from fuse-jna, inline conn")
-  (let [conn (new-datomic-conn)
-        f   (proxy [FuseFilesystemAdapterFull] []
-
-              (getattr
-                [^String path ^StructStat$StatWrapper stat]
-                (prn "getattr" path)
-                (.setMode stat TypeMode$NodeType/DIRECTORY)
-                0)
-
-              (readdir
-                [^String path ^DirectoryFiller filler]
-                (prn "reading directory")
-                (let [^Iterable entries (->> (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                                                  (d/db conn))
-                                             first)]
-                  (.add filler entries))
-                0))]
-    
-    (.mount f
-            (doto (java.io.File. "fooconn/")
-              (.mkdirs))
-            false))
-
-
-
-
-
-  
-
-  (println "query running in mounted proxy inheriting from fuse-jna, defn conn")
-  (let [conn (new-datomic-conn)
-        f  (mkfs-conn conn)]
-    
-    (.mount f
-            (doto (java.io.File. "fooconndef/")
-              (.mkdirs))
-            false))
-
-
-  (println "query running in mounted proxy inheriting from fuse-jna inline db")
-  (let [conn (new-datomic-conn)
-        db (d/db conn)
-        f   (proxy [FuseFilesystemAdapterFull] []
-
-              (getattr
-                [^String path ^StructStat$StatWrapper stat]
-                (prn "getattr" path)
-                (.setMode stat TypeMode$NodeType/DIRECTORY)
-                0)
-
-              (readdir
-                [^String path ^DirectoryFiller filler]
-                (prn "reading directory")
-                (let [^Iterable entries (->> (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                                                  db)
-                                             first)]
-                  (.add filler entries))
-                0))]
-    (.mount f
-            (doto (java.io.File. "foodb/")
-              (.mkdirs))
-            false))
-
   (println "query running in mounted proxy inheriting from fuse-jna, defn db")
   (let [conn (new-datomic-conn)
         f  (mkfs-db (d/db conn))]
@@ -189,8 +75,5 @@
             false))
 
 
-
-
-
-;;  (System/exit 0)
+  ;;  (System/exit 0)
   )
