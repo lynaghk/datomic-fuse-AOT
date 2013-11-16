@@ -5,7 +5,7 @@ Discussion on datomic mailing list: https://groups.google.com/forum/#!topic/dato
 
 Run
 
-    lein uberjar && java -jar target/duber-0.1.0-SNAPSHOT-standalone.jar
+    lein uberjar && java -Djna.nosys=true -jar target/duber-0.1.0-SNAPSHOT-standalone.jar
 
 to get this exception:
 
@@ -45,7 +45,9 @@ Note that if you exercise the Datomic fulltext codez by running:
 *before* mounting the `proxy` then everything works fine.
 (See `src/duber/main.clj`.)
 
-All tests were on OS X 10.7.5 with
+All tests were run with Clojure 1.5.1 and datomic free 0.8.4218.
+
+On OS X 10.7.5 with
 
 ```
 java version "1.7.0_10"
@@ -53,6 +55,14 @@ Java(TM) SE Runtime Environment (build 1.7.0_10-b18)
 Java HotSpot(TM) 64-Bit Server VM (build 23.6-b04, mixed mode)
 ```
 
-and Clojure 1.5.1 and datomic free 0.8.4218.
+and on x64 Debian Linux with
+
+```
+java version "1.7.0_25"
+OpenJDK Runtime Environment (IcedTea 2.3.12) (7u25-2.3.12-4)
+OpenJDK 64-Bit Server VM (build 23.7-b01, mixed mode)
+```
+
+ 
 
 Everything works fine from a REPL.
