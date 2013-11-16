@@ -1,6 +1,15 @@
 (ns duber.main
   (:require [datomic.api :as d])
-  (:import duber.Fooer)
+  (:import duber.Fooer
+           java.io.File
+           (net.fusejna DirectoryFiller
+                        ErrorCodes
+                        FuseFilesystem
+                        StructFuseFileInfo$FileInfoWrapper
+                        StructStat$StatWrapper)
+           net.fusejna.types.TypeMode$NodeType
+           net.fusejna.types.TypeMode$ModeWrapper
+           net.fusejna.util.FuseFilesystemAdapterFull)
   (:gen-class))
 
 (defn new-datomic-conn
@@ -23,18 +32,31 @@
                    :duber/name "hello world"}])
     conn))
 
-(defn fooer [!db]
-  (proxy [Fooer] []
-    (foo []
 
-      (println (d/q '[:find ?n :where [?e :duber/name ?n]]
-                    @!db))
+(defn mkfs
+  [conn]
+  (proxy [FuseFilesystemAdapterFull] []
 
-      (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                    @!db)))))
+    (getattr
+      [^String path ^StructStat$StatWrapper stat]
+      (prn "getattr" path)
+      (.setMode stat TypeMode$NodeType/DIRECTORY)
+      0)
+
+    (readdir
+      [^String path ^DirectoryFiller filler]
+      (prn "reading directory")
+      (let [^Iterable entries (->> (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
+                                        (d/db conn))
+                                   first)]
+        (.add filler entries))
+      0)))
+
+
 
 (defn -main [& args]
 
+  (println "plain query")
   (let [conn (new-datomic-conn)]
     (println (d/q '[:find ?n :where [?e :duber/name ?n]]
                   (d/db conn)))
@@ -42,8 +64,32 @@
     (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
                   (d/db conn))))
 
+  (println "query running in proxy inheriting from concrete Java class")
   (let [conn (new-datomic-conn)
-        f (fooer (atom (d/db conn)))]
+        f (proxy [Fooer] []
+            (foo []
+              (println (d/q '[:find ?n :where [?e :duber/name ?n]]
+                            (d/db conn)))
+
+              (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
+                            (d/db conn)))))]
     (.foo f))
+
+  (println "query running in mounted proxy inheriting from fuse-jna")
+
+  (let [conn (new-datomic-conn)
+        f (mkfs conn)]
+    (.mount f
+            (doto (java.io.File. "foo/")
+              (.mkdirs))
+            false))
+  (println "query running in proxy inheriting from fuse-jna")
+
+
+  (let [conn (new-datomic-conn)
+        f (mkfs conn)]
+    (.readdir f "none" nil))
+
+
 
   (System/exit 0))
