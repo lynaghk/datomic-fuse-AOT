@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [com.datomic/datomic-free "0.8.4218"]
+                 [com.datomic/datomic-free "0.8.4270"]
 
                  [fuse-jna "abceef"]
                  [net.java.dev.jna/jna "3.5.2"] ;;dependency for fuse-jna
