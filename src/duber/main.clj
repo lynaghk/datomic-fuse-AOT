@@ -1,16 +1,8 @@
 (ns duber.main
   (:require [datomic.api :as d])
-  (:import duber.Fooer
-           java.io.File
-           (net.fusejna DirectoryFiller
-                        ErrorCodes
-                        FuseFilesystem
-                        StructFuseFileInfo$FileInfoWrapper
-                        StructStat$StatWrapper)
-           net.fusejna.types.TypeMode$NodeType
-           net.fusejna.types.TypeMode$ModeWrapper
-           net.fusejna.util.FuseFilesystemAdapterFull)
-  (:gen-class))
+  (:import java.io.File
+           net.fusejna.ErrorCodes
+           net.fusejna.util.FuseFilesystemAdapterFull))
 
 (defn new-datomic-conn
   []
@@ -33,47 +25,35 @@
     conn))
 
 
-(defn mkfs-db
-  [db]
-  (proxy [FuseFilesystemAdapterFull] []
-
-    (getattr
-      [^String path ^StructStat$StatWrapper stat]
-      (prn "getattr" path)
-      (.setMode stat TypeMode$NodeType/DIRECTORY)
-      0)
-
-    (readdir
-      [^String path ^DirectoryFiller filler]
-      (prn "reading directory")
-      (let [^Iterable entries (->> (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                                        db)
-                                   first)]
-        (.add filler entries))
-      0)))
-
 
 (defn -main [& args]
 
-  ;;uncomment this to fix AOT.
+  ;;when this block runs, it magically fixes the problem with fulltext query from the FUSE thread.
+  (when (= "work" (first args))
+    (println "invoking a fulltext query against an in-memory database")
+    (let [conn (new-datomic-conn)]
+      (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
+                    (d/db conn)))))
   
-  ;; (println "plain query")
-  ;; (let [conn (new-datomic-conn)]
-  ;;   (println (d/q '[:find ?n :where [?e :duber/name ?n]]
-  ;;                 (d/db conn)))
 
-  ;;   (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-  ;;                 (d/db conn))))
-  
-  (println "query running in mounted proxy inheriting from fuse-jna, defn db")
   (let [conn (new-datomic-conn)
-        f  (mkfs-db (d/db conn))]
-    
-    (.mount f
-            (doto (java.io.File. "foodbdef/")
-              (.mkdirs))
-            false))
+        testmount (doto (java.io.File. "testmount/")
+                    (.mkdirs))
+        ;;A proxy with a getattr method for FUSE thread to invoke
+        f (proxy [FuseFilesystemAdapterFull] []
+            (getattr [path stat]
+              (try
+                (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
+                              (d/db conn)))
+                (catch Throwable e
+                  (.printStackTrace e)))
 
+              ;;since this is just a test to get the FUSE thread to invoke our proxy, we can always return "nothing found"
+              (- (ErrorCodes/ENOENT))))]
 
-  ;;  (System/exit 0)
-  )
+    ;;mount our filesystem
+    (.mount f testmount false)
+    ;;this will force `getattr` to be called in our proxy method
+    (.exists testmount))
+
+  (System/exit 0))

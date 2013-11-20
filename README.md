@@ -5,8 +5,8 @@ Discussion on datomic mailing list: https://groups.google.com/forum/#!topic/dato
 
 Run
 
-    lein uberjar && java -Djna.nosys=true -jar target/duber-0.1.0-SNAPSHOT-standalone.jar
-
+    lein run
+    
 to get this exception:
 
 ```
@@ -28,6 +28,12 @@ com.google.common.util.concurrent.UncheckedExecutionException: java.lang.ClassNo
         at duber.main.proxy$net.fusejna.util.FuseFilesystemAdapterFull$0.readdir(Unknown Source)
 ```
 
+but run
+
+    lein run work
+    
+to avoid the exception.
+
 It took me several hours to consistently replicate.
 (See the history of this repo.)
 The exception is only thrown when a datomic fulltext query is run within a `proxy` invoked by a FUSE callback.
@@ -45,7 +51,7 @@ Note that if you exercise the Datomic fulltext codez by running:
 *before* mounting the `proxy` then everything works fine.
 (See `src/duber/main.clj`.)
 
-All tests were run with Clojure 1.5.1 and datomic free 0.8.4218.
+All tests were run with Clojure 1.5.1 and datomic free 0.8.4270.
 
 On OS X 10.7.5 with
 
