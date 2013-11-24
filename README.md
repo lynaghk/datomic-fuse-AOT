@@ -51,6 +51,18 @@ Note that if you exercise the Datomic fulltext codez by running:
 *before* mounting the `proxy` then everything works fine.
 (See `src/duber/main.clj`.)
 
+The issue is not specific to the fulltext search; this query has the same issue:
+
+```clojure
+(d/q '[:find ?e
+       :in $ ?name
+       :where [?e :duber/name ?name]]
+     (d/db conn) "foo")
+```
+
+and same resolution (running the query before mounting the `proxy`).
+
+
 All tests were run with Clojure 1.5.1 and datomic free 0.8.4270.
 
 On OS X 10.7.5 with

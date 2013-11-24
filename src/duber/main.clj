@@ -28,12 +28,17 @@
 
 (defn -main [& args]
 
-  ;;when this block runs, it magically fixes the problem with fulltext query from the FUSE thread.
+  ;;when this block runs, it magically fixes the problem running the same query from the FUSE thread.
   (when (= "work" (first args))
-    (println "invoking a fulltext query against an in-memory database")
     (let [conn (new-datomic-conn)]
-      (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                    (d/db conn)))))
+      
+      ;; (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
+      ;;               (d/db conn)))
+      
+      (println (d/q '[:find ?e
+                      :in $ ?name
+                      :where [?e :duber/name ?name]]
+                    (d/db conn) "foo"))))
   
 
   (let [conn (new-datomic-conn)
@@ -43,8 +48,22 @@
         f (proxy [FuseFilesystemAdapterFull] []
             (getattr [path stat]
               (try
-                (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
-                              (d/db conn)))
+                ;;Doing a fulltext search fails...
+                
+                ;; (println (d/q '[:find ?n :where [(fulltext $ :duber/name "hello") [[?e ?n]]]]
+                ;;               (d/db conn)))
+
+                ;;and we can get the same exception by providing a query input:
+                (println (d/q '[:find ?e
+                                :in $ ?name
+                                :where [?e :duber/name ?name]]
+                              (d/db conn) "foo"))
+
+
+                ;;interestingly, matching a literal string does *not* throw an exception:
+                ;; (println (d/q '[:find ?e :where [?e :duber/name "hello world"]]
+                ;;               (d/db conn)))
+
                 (catch Throwable e
                   (.printStackTrace e)))
 
